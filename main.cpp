@@ -2,17 +2,24 @@
 #include "mmd_data.hpp"
 #include <GL/glut.h>
 
+GLfloat lightPosition[4] = {-20.0, -20.0, 100.0, 1.0};
+GLfloat white[] = {1.0, 1.0, 1.0, 1.0};
+
 MMD_model sample;
 
 void init(void)
 {
     glClearColor(1.0, 1.0, 1.0, 1.0);
-/*    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
+    glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-
+    glCullFace(GL_BACK);
+    
     glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);*/
+    glEnable(GL_LIGHT0);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, white);
 }
 
 void resize(int w, int h)
@@ -69,12 +76,13 @@ int main(int argc, char** argv)
     std::cout << std::endl;
     std::cout << "Read End" << std::endl;
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGBA);
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH);
     glutCreateWindow(argv[0]);
     glutDisplayFunc(display);
     glutReshapeFunc(resize);
     glutKeyboardFunc(keyboard);
     init();
+    sample.texture_config();
     glutPostRedisplay();
     glutMainLoop();
     return 0;

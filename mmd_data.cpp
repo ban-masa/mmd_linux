@@ -3,6 +3,8 @@
 #include "mmd_data.hpp"
 #include <GL/glut.h>
 #include <wchar.h>
+#include <cv.h>
+#include <highgui.h>
 
 void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
 {
@@ -149,19 +151,19 @@ void Face::read_data(std::ifstream &ifs, unsigned char (&info)[8])
         for (int i = 0; i < 3; i++) {
             unsigned char temp;
             ifs.read((char*)&temp, sizeof(temp));
-            this->vertex_index[i] = (int64_t)temp;
+            this->vertex_index[i] = (unsigned int)temp;
         }
     } else if (info[2] == 2) {
         for (int i = 0; i < 3; i++) {
             unsigned short temp;
             ifs.read((char*)&temp, sizeof(temp));
-            this->vertex_index[i] = (int64_t)temp;
+            this->vertex_index[i] = (unsigned int)temp;
         }
     } else if (info[2] == 4) {
         for (int i = 0; i < 3; i++) {
             unsigned int temp;
             ifs.read((char*)&temp, sizeof(temp));
-            this->vertex_index[i] = (int64_t)temp;
+            this->vertex_index[i] = (unsigned int)temp;
         }
     }
 }
@@ -180,7 +182,51 @@ void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
         this->path = new char[this->num];
         ifs.read((char*)(this->path), sizeof(char) * this->num);
     }
-    std::cout << this->path << std::endl;
+}
+
+void Texture::read_image(void)
+{
+    IplImage* temp;
+    if ((this->image = cvLoadImage(this->path, CV_LOAD_IMAGE_COLOR)) == 0) {
+        std::cerr << "Load Error" << std::endl;
+        exit(1);
+    }
+    cvCvtColor(this->image, this->image, CV_BGR2RGB);
+}
+
+void Material::read_data(std::ifstream &ifs, unsigned char (&info)[8])
+{
+    for (int i = 0; i < 2; i++) {
+        int temp;
+        ifs.read((char*)&temp, sizeof(int));
+        this->material_name[i] = new char[temp];
+        ifs.read((char*)(this->material_name[i]), sizeof(char) * temp);
+    }
+
+    ifs.read((char*)(this->diffuse), sizeof(float) * 4);
+    ifs.read((char*)(this->specular), sizeof(float) * 3);
+    this->specular[3] = 1.0;
+    ifs.read((char*)(&(this->co_specular)), sizeof(float));
+    ifs.read((char*)(this->ambient), sizeof(float) * 3);
+    this->ambient[3] = 1.0;
+    ifs.read((char*)(&(this->bit_flag)), sizeof(unsigned char));
+    ifs.read((char*)(this->edge_color), sizeof(float) * 4);
+    ifs.read((char*)(&(this->edge_size)), sizeof(float));
+//info[3]
+    ifs.read((char*)(&(this->normal_texture_index)), sizeof(char) * info[3]);
+    ifs.read((char*)(&(this->sphere_texture_index)), sizeof(char) * info[3]);
+    ifs.read((char*)(&(this->sphere_mode)), sizeof(unsigned char));
+    ifs.read((char*)(&(this->common_toon_flag)), sizeof(unsigned char));
+    if (this->common_toon_flag == 0) {
+        ifs.read((char*)(&(this->toon_texture_index)), sizeof(unsigned char) * info[3]);
+    } else if (this->common_toon_flag == 1) {
+        ifs.read((char*)(&(this->common_toon_texture)), sizeof(this->common_toon_flag));
+    }
+    int temp;
+    ifs.read((char*)&temp, sizeof(temp));
+    this->memo = new char[temp];
+    ifs.read((char*)(this->memo), sizeof(char) * temp);
+    ifs.read((char*)(&(this->vertex_count)), sizeof(int));
 }
 
 void MMD_model::read_model(char* filename)
@@ -190,6 +236,7 @@ void MMD_model::read_model(char* filename)
         std::cerr << "ファイルオープンに失敗" << std::endl;
         std::exit(1);
     }
+
     ifs.read((char*)(this->magic1), sizeof(unsigned char) * 4);
     ifs.read((char*)(&(this->version)), sizeof(float));
     ifs.read((char*)(&(this->info_byte)), sizeof(unsigned char));
@@ -201,22 +248,60 @@ void MMD_model::read_model(char* filename)
         this->text_buf[i] = new char[temp];
         ifs.read((char*)(this->text_buf[i]), sizeof(char) * temp);
     }
+
     ifs.read((char*)(&(this->vertex_num)), sizeof(int));
     this->vertex_data = new Vertex[this->vertex_num];
+    this->vertex_index = new float[this->vertex_num * 3];
+    this->norm_index = new float[this->vertex_num * 3];
+    this->uv_index = new float[this->vertex_num * 2];
     for (int i = 0; i < this->vertex_num; i++) {
         this->vertex_data[i].read_data(ifs, this->info, i);
+        for (int j = 0; j < 3; j++) {
+            this->vertex_index[3 * i + j] = this->vertex_data[i].locate[j];
+            this->norm_index[3 * i + j] = this->vertex_data[i].normal[j];
+        }
+        this->uv_index[2 * i] = this->vertex_data[i].uv[0];
+        this->uv_index[2 * i + 1] = this->vertex_data[i].uv[1];
     }
     ifs.read((char*)(&(this->face_num)), sizeof(int));
+    this->face_vertex_index = new unsigned int[this->face_num];
     this->face_num /= 3;
     this->face_data = new Face[this->face_num];
     for (int i = 0; i < this->face_num; i++) {
         this->face_data[i].read_data(ifs, this->info);
+        for (int j = 0; j < 3; j++) {
+            this->face_vertex_index[3 * i + j] = this->face_data[i].vertex_index[j];
+        }
     }
     ifs.read((char*)(&(this->texture_num)), sizeof(int));
     this->texture_data = new Texture[this->texture_num];
     for (int i = 0; i < this->texture_num; i++) {
         this->texture_data[i].read_data(ifs, this->info);
     }
+    ifs.read((char*)(&(this->material_num)), sizeof(int));
+    this->material_data = new Material[this->material_num];
+    for (int i = 0; i < this->material_num; i++) {
+        this->material_data[i].read_data(ifs, this->info);
+    }
+}
+
+void MMD_model::texture_config(void)
+{
+    for (int i = 0; i < this->texture_num; i++) {
+        this->texture_data[i].read_image();
+    }
+    glEnable(GL_TEXTURE_2D);
+    for (int i = 0; i < this->texture_num; i++) {
+        glGenTextures(1, &(this->texture_data[i].id));
+        glBindTexture(GL_TEXTURE_2D, this->texture_data[i].id);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->texture_data[i].image->width, this->texture_data[i].image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, this->texture_data[i].image->imageData);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+    glDisable(GL_TEXTURE_2D);
 }
 
 void MMD_model::display(void)
@@ -227,20 +312,61 @@ void MMD_model::display(void)
         glTranslated(0.0, 0.0, (double)(this->distance));
         glRotated((double)(this->rotate_angle_y), 0.0, 1.0, 0.0);
         glRotated((double)(this->rotate_angle_x), 1.0, 0.0, 0.0);
-        for (int i = 0; i < this->face_num; i++) {
+  
+/*        int start_face = 0;
+        for (int i = 0; i < this->material_num; i++) {
+            glMaterialfv(GL_FRONT, GL_AMBIENT, this->material_data[i].ambient);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, this->material_data[i].diffuse);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, this->material_data[i].specular);
+            glMaterialfv(GL_FRONT, GL_SHININESS, &(this->material_data[i].co_specular));
+
+            for (int j = 0; j < this->material_data[i].vertex_count/3; j++) {
+                glBegin(GL_TRIANGLES);
+                for (int k = 0; k < 3; k++) {
+                    glNormal3fv((this->vertex_data[this->face_vertex_index[start_face + j * 3 + k]]).normal);
+                    glVertex3fv((this->vertex_data[this->face_vertex_index[start_face + j * 3 + k]]).locate);
+                }
+                glEnd();
+            }
+            start_face += this->material_data[i].vertex_count;
+        }*/
+        glEnable(GL_TEXTURE_2D);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        
+        glVertexPointer(3, GL_FLOAT, 0, this->vertex_index);
+        glNormalPointer(GL_FLOAT, 0, this->norm_index);
+        glTexCoordPointer(2, GL_FLOAT, 0, this->uv_index);
+
+        int start_face = 0;
+        for (int i = 0; i < this->material_num; i++) {
+            glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+            glBindTexture(GL_TEXTURE_2D, this->texture_data[this->material_data[i].normal_texture_index].id);
+            glMaterialfv(GL_FRONT, GL_AMBIENT, this->material_data[i].ambient);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, this->material_data[i].diffuse);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, this->material_data[i].specular);
+            glMaterialfv(GL_FRONT, GL_SHININESS, &(this->material_data[i].co_specular));
+            glDrawElements(GL_TRIANGLES, this->material_data[i].vertex_count, GL_UNSIGNED_INT, &(this->face_vertex_index[start_face]));
+            start_face += this->material_data[i].vertex_count;
+        }    
+        
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_NORMAL_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glDisable(GL_TEXTURE_2D);
+
+/*        for (int i = 0; i < this->face_num; i++) {
             glColor3d(0.2, 0.2, 0.2);
             glBegin(GL_TRIANGLES);
             for (int j = 0; j < 3; j++) {
-                if (this->face_data[i].vertex_index[j] == -1) {
-                    std::cout << "???" << std::endl;
-                    continue;
-                }
-//                glNormal3fv((this->vertex_data[this->face_data[i].vertex_index[j]]).normal);
+                glNormal3fv((this->vertex_data[this->face_data[i].vertex_index[j]]).normal);
                 glVertex3fv((this->vertex_data[this->face_data[i].vertex_index[j]]).locate);
             }
             glEnd();
-        }
+        }*/
     }
     glPopMatrix();
+    glutSwapBuffers();
     glFlush();
 }

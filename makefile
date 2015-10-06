@@ -1,6 +1,6 @@
 CC      = g++
-CFLAGS  = -std=c++11 -MMD -MP -g
-LDFLAGS = -L/usr/X11R6/lib -lglut -lGL -lGLU -lXmu -lXi -lXext -lX11 -lm -lpthread
+CFLAGS  = -std=c++11 -MMD -MP -g `pkg-config opencv --cflags`
+LDFLAGS = -L/usr/X11R6/lib -lglut -lGL -lGLU -lXmu -lXi -lXext -lX11 -lm -lpthread `pkg-config opencv --libs`
 LIBS    = 
 INCLUDE = -I/usr/X11R6/include
 SRC_DIR = .

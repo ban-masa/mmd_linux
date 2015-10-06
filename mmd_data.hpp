@@ -1,5 +1,8 @@
 #include <string>
 #include <iostream>
+#include <cv.h>
+#include <highgui.h>
+#include <GL/glut.h>
 
 class Vertex {
 public:
@@ -38,20 +41,38 @@ public:
 
 class Face {
 public:
-    int64_t vertex_index[3];
+    unsigned int vertex_index[3];
     void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
-    Face()
-    {
-        for (int i = 0; i < 3; i++) {
-            this->vertex_index[i] = -1;
-        }
-    }
 };
 
 class Texture {
 public:
+    GLuint id;
     int num;
     char* path;
+    IplImage* image;
+    void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
+    void read_image(void);
+};
+
+class Material {
+public:
+    char* material_name[2];
+    float diffuse[4];
+    float specular[4];
+    float co_specular;
+    float ambient[4];
+    unsigned char bit_flag;
+    float edge_color[4];
+    float edge_size;
+    int normal_texture_index;
+    int sphere_texture_index;
+    unsigned char sphere_mode;
+    unsigned char common_toon_flag;
+    int toon_texture_index;
+    unsigned char common_toon_texture;
+    char* memo;
+    int vertex_count;
     void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
 };
 
@@ -78,12 +99,20 @@ public:
     int vertex_num;
     int face_num;
     int texture_num;
+    int material_num;
     int distance;
     int rotate_angle_x;
     int rotate_angle_y;
+    float* vertex_index;
+    float* norm_index;
+    float* uv_index;
+    unsigned int* face_vertex_index;
+
     Vertex* vertex_data;
     Face* face_data;
     Texture* texture_data;
+    Material* material_data;
+
     MMD_model()
     {
         distance = 0;
@@ -103,4 +132,5 @@ public:
 
     void read_model(char* filename);
     void display(void);
+    void texture_config(void);
 };
