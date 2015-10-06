@@ -48,6 +48,13 @@ public:
     }
 };
 
+class Texture {
+public:
+    int num;
+    char* path;
+    void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
+};
+
 class MMD_model {
 public:
     unsigned char magic1[4]; //マジックナンバー用
@@ -70,11 +77,13 @@ public:
     char *text_buf[4];
     int vertex_num;
     int face_num;
+    int texture_num;
     int distance;
     int rotate_angle_x;
     int rotate_angle_y;
     Vertex* vertex_data;
     Face* face_data;
+    Texture* texture_data;
     MMD_model()
     {
         distance = 0;
@@ -89,6 +98,7 @@ public:
         }
         delete [] this->vertex_data;
         delete [] this->face_data;
+        delete [] this->texture_data;
     }
 
     void read_model(char* filename);

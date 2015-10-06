@@ -2,6 +2,7 @@
 #include <fstream>
 #include "mmd_data.hpp"
 #include <GL/glut.h>
+#include <wchar.h>
 
 void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
 {
@@ -165,6 +166,23 @@ void Face::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     }
 }
 
+void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
+{
+    ifs.read((char*)(&(this->num)), sizeof(int));
+    if (info[0] == 0) {
+        this->path = new char[this->num/2];
+        char* temp = new char[this->num];
+        ifs.read((char*)temp, sizeof(char) * this->num);
+        for (int i = 0; i < this->num; i++) {
+            if (i%2 == 0) this->path[i/2] = temp[i];
+        }
+    } else if (info[0] == 1) {
+        this->path = new char[this->num];
+        ifs.read((char*)(this->path), sizeof(char) * this->num);
+    }
+    std::cout << this->path << std::endl;
+}
+
 void MMD_model::read_model(char* filename)
 {
     std::ifstream ifs(filename, std::ios_base::in | std::ios_base::binary);
@@ -193,6 +211,11 @@ void MMD_model::read_model(char* filename)
     this->face_data = new Face[this->face_num];
     for (int i = 0; i < this->face_num; i++) {
         this->face_data[i].read_data(ifs, this->info);
+    }
+    ifs.read((char*)(&(this->texture_num)), sizeof(int));
+    this->texture_data = new Texture[this->texture_num];
+    for (int i = 0; i < this->texture_num; i++) {
+        this->texture_data[i].read_data(ifs, this->info);
     }
 }
 
