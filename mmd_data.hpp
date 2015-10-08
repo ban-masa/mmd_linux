@@ -76,6 +76,37 @@ public:
     void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
 };
 
+class IK_link {
+public:
+    int link_bone_index;
+    unsigned char angle_limit_flag;
+    float upper_limit[3];
+    float lower_limit[3];
+};
+
+class Bone {
+public:
+    char* bone_name[2];
+    float pos[3];
+    int parent_index;
+    int transform_hierarchy;
+    unsigned short bit_flag;
+    float pos_offset[3];
+    int connect_bone_index;
+    int grant_bone_index;
+    float grant_rate;
+    float axis_vect[3];
+    float x_axis_vect[3];
+    float z_axis_vect[3];
+    int key_val;
+    int IK_target_bone_index;
+    int IK_loop_num;
+    float IK_limit_angle;
+    int IK_link_num;
+    IK_link* IK_link_data;
+    void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
+};
+
 class MMD_model {
 public:
     unsigned char magic1[4]; //マジックナンバー用
@@ -100,6 +131,7 @@ public:
     int face_num;
     int texture_num;
     int material_num;
+    int bone_num;
     int distance;
     int rotate_angle_x;
     int rotate_angle_y;
@@ -112,6 +144,7 @@ public:
     Face* face_data;
     Texture* texture_data;
     Material* material_data;
+    Bone* bone_data;
 
     MMD_model()
     {

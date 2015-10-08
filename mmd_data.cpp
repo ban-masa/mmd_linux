@@ -188,6 +188,7 @@ void Texture::read_image(void)
 {
     IplImage* temp;
     if ((this->image = cvLoadImage(this->path, CV_LOAD_IMAGE_COLOR)) == 0) {
+        std::cerr << this->path << std::endl;
         std::cerr << "Load Error" << std::endl;
         exit(1);
     }
@@ -227,6 +228,55 @@ void Material::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     this->memo = new char[temp];
     ifs.read((char*)(this->memo), sizeof(char) * temp);
     ifs.read((char*)(&(this->vertex_count)), sizeof(int));
+}
+
+void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
+{
+    int temp;
+    ifs.read((char*)&temp, sizeof(int));
+    this->bone_name[0] = new char[temp];
+    ifs.read((char*)(&(this->bone_name[0])), sizeof(char) * temp);
+    ifs.read((char*)&temp, sizeof(int));
+    this->bone_name[1] = new char[temp];
+    ifs.read((char*)(&(this->bone_name[1])), sizeof(char) * temp);
+    ifs.read((char*)(&(this->pos)), sizeof(float) * 3);
+    ifs.read((char*)(&(this->parent_index)), sizeof(unsigned char) * info[5]);
+    ifs.read((char*)(&(this->transform_hierarchy)), sizeof(int));
+    ifs.read((char*)(&(this->bit_flag)), sizeof(unsigned short));
+    if (this->bit_flag & 0x0001) {
+        ifs.read((char*)(&(this->connect_bone_index)), sizeof(unsigned char) * info[5]);
+    } else {
+        ifs.read((char*)(this->pos_offset), sizeof(float) * 3);
+    }
+    if (this->bit_flag & (0x0100 | 0x0200)) {
+        ifs.read((char*)(&(this->grant_bone_index)), sizeof(unsigned char) * info[5]);
+        ifs.read((char*)(&(this->grant_rate)), sizeof(float));
+    }
+    if (this->bit_flag & 0x0400) {
+        ifs.read((char*)(this->axis_vect), sizeof(float) * 3);
+    }
+    if (this->bit_flag & 0x0800) {
+        ifs.read((char*)(this->x_axis_vect), sizeof(float) * 3);
+        ifs.read((char*)(this->z_axis_vect), sizeof(float) * 3);
+    }
+    if (this->bit_flag & 0x2000) {
+        ifs.read((char*)(&(this->key_val)), sizeof(int));
+    }
+    if (this->bit_flag & 0x0020) {
+        ifs.read((char*)(&(this->IK_target_bone_index)), sizeof(unsigned char) * info[5]);
+        ifs.read((char*)(&(this->IK_loop_num)), sizeof(int));
+        ifs.read((char*)(&(this->IK_limit_angle)), sizeof(float));
+        ifs.read((char*)(&(this->IK_link_num)), sizeof(int));
+        this->IK_link_data = new IK_link[this->IK_link_num];
+        for (int i = 0; i < this->IK_link_num; i++) {
+            ifs.read((char*)(&(this->IK_link_data[i].link_bone_index)), sizeof(unsigned char) * info[5]);
+            ifs.read((char*)(&(this->IK_link_data[i].angle_limit_flag)), sizeof(unsigned char));
+            if (this->IK_link_data[i].angle_limit_flag == 1) {
+                ifs.read((char*)(this->IK_link_data[i].upper_limit), sizeof(float) * 3);
+                ifs.read((char*)(this->IK_link_data[i].lower_limit), sizeof(float) * 3);
+            }
+        }
+    }
 }
 
 void MMD_model::read_model(char* filename)
@@ -282,6 +332,11 @@ void MMD_model::read_model(char* filename)
     this->material_data = new Material[this->material_num];
     for (int i = 0; i < this->material_num; i++) {
         this->material_data[i].read_data(ifs, this->info);
+    }
+    ifs.read((char*)(&(this->bone_num)), sizeof(int));
+    this->bone_data = new Bone[this->bone_num];
+    for (int i = 0; i < this->bone_num; i++) {
+        this->bone_data[i].read_data(ifs, this->info);
     }
 }
 

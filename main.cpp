@@ -12,8 +12,6 @@ void init(void)
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
     glFrontFace(GL_CCW);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
     
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -26,7 +24,7 @@ void resize(int w, int h)
 {
     glViewport(0, 0, w, h);
     glLoadIdentity();
-    gluPerspective(30.0, (double)w / (double)h, 1.0, 100.0);
+    gluPerspective(30.0, (double)w / (double)h, 1.0, 200.0);
     gluLookAt(0.0, 10.0, 10.0, 0.0, 10.0, -10.0, 0.0, 1.0, 0.0);
 }
 
