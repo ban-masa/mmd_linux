@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include "mmd_data.hpp"
+#include "conv_utf16.hpp"
 #include <GL/glut.h>
-#include <wchar.h>
 #include <cv.h>
 #include <highgui.h>
 
@@ -172,12 +172,16 @@ void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
 {
     ifs.read((char*)(&(this->num)), sizeof(int));
     if (info[0] == 0) {
-        this->path = new char[this->num/2];
-        char* temp = new char[this->num];
-        ifs.read((char*)temp, sizeof(char) * this->num);
-        for (int i = 0; i < this->num; i++) {
-            if (i%2 == 0) this->path[i/2] = temp[i];
+        this->path = new char[1024];
+        char* temp = new char[1024];
+        if (this->num > 1024) {
+            std::cout << "Buffer Error" << std::endl;
+            return;
         }
+        ifs.read((char*)temp, sizeof(char) * this->num);
+        conv_utf16(temp, this->path, this->num);
+        std::cout << this->path << std::endl;
+        std::cout << std::endl;
     } else if (info[0] == 1) {
         this->path = new char[this->num];
         ifs.read((char*)(this->path), sizeof(char) * this->num);
