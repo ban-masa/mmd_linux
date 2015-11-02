@@ -2,8 +2,8 @@
 #include "mmd_data.hpp"
 #include <GL/glut.h>
 
-GLfloat lightPosition[4] = {-20.0, 20.0, -100.0, 0.0};
-GLfloat white[] = {0.2, 0.2, 0.2, 1.0};
+GLfloat lightPosition[4] = {-20.0, 20.0, 10000.0, 0.0};
+GLfloat white[] = {0.5, 0.5, 0.5, 1.0};
 
 MMD_model sample;
 
@@ -19,10 +19,13 @@ void init(void)
 
 void resize(int w, int h)
 {
+	glMatrixMode(GL_PROJECTION);
     glViewport(0, 0, w, h);
     glLoadIdentity();
-    gluPerspective(30.0, (double)w / (double)h, 1.0, 200.0);
-    gluLookAt(0.0, 10.0, 10.0, 0.0, 10.0, -10.0, 0.0, 1.0, 0.0);
+    gluPerspective(30.0, (double)w / (double)h, 1.0, 5000.0);
+    gluLookAt(0.0, 10.0, 100.0, 0.0, 10.0, -10.0, 0.0, 1.0, 0.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
 //    glLightfv(GL_LIGHT0, GL_SPECULAR, white);
