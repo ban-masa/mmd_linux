@@ -179,7 +179,7 @@ void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
             return;
         }
         ifs.read((char*)temp, sizeof(char) * this->num);
-        conv_utf16(temp, this->path, this->num);
+        conv_utf16(temp, this->path);
         std::cout << this->path << std::endl;
         std::cout << std::endl;
     } else if (info[0] == 1) {

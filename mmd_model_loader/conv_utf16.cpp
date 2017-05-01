@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iconv.h>
 
-void conv_utf16(char* input, char* output, int num)
+void conv_utf16(char* input, char* output)
 {
     char *ptr_in = input;
     char *ptr_out = output;
