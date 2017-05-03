@@ -5,6 +5,7 @@
 #include <GL/glut.h>
 #include <cv.h>
 #include <highgui.h>
+#include <string.h>
 
 void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
 {
@@ -30,16 +31,16 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
 
     if (this->weight_type == 0) {
         if (info[5] == 1) {
-            char temp;
-            ifs.read((char*)&temp, sizeof(char));
+            int8_t temp;
+            ifs.read((char*)&temp, sizeof(int8_t));
             this->bone_index[0] = (int)temp;
         } else if (info[5] == 2) {
-            short temp;
-            ifs.read((char*)&temp, sizeof(short));
+            int16_t temp;
+            ifs.read((char*)&temp, sizeof(int16_t));
             this->bone_index[0] = (int)temp;
         } else if (info[5] == 4) {
-            int temp;
-            ifs.read((char*)&temp, sizeof(int));
+            int32_t temp;
+            ifs.read((char*)&temp, sizeof(int32_t));
             this->bone_index[0] = (int)temp;
         }
         this->bone_weight[0] = 1.0;
@@ -49,22 +50,22 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
         }
     } else if (this->weight_type == 1) {
         if (info[5] == 1) {
-            char temp;
-            ifs.read((char*)&temp, sizeof(char));
+            int8_t temp;
+            ifs.read((char*)&temp, sizeof(int8_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(char));
+            ifs.read((char*)&temp, sizeof(int8_t));
             this->bone_index[1] = (int)temp;
         } else if (info[5] == 2) {
-            short temp;
-            ifs.read((char*)&temp, sizeof(short));
+            int16_t temp;
+            ifs.read((char*)&temp, sizeof(int16_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(short));
+            ifs.read((char*)&temp, sizeof(int16_t));
             this->bone_index[1] = (int)temp;
         } else if (info[5] == 4) {
-            int temp;
-            ifs.read((char*)&temp, sizeof(int));
+            int32_t temp;
+            ifs.read((char*)&temp, sizeof(int32_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(int));
+            ifs.read((char*)&temp, sizeof(int32_t));
             this->bone_index[1] = (int)temp;
         }
         float w;
@@ -77,9 +78,9 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
         }
     } else if (this->weight_type == 2) {
         if (info[5] == 1) {
-            char temp;
+            int8_t temp;
             for (int i = 0; i < 4; i++) {
-                ifs.read((char*)&temp, sizeof(char));
+                ifs.read((char*)&temp, sizeof(int8_t));
                 this->bone_index[i] = (int)temp;
             }
             float w;
@@ -88,9 +89,9 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
                 this->bone_weight[i] = w;
             }
         } else if (info[5] == 2) {
-            short temp;
+            int16_t temp;
             for (int i = 0; i < 4; i++) {
-                ifs.read((char*)&temp, sizeof(short));
+                ifs.read((char*)&temp, sizeof(int16_t));
                 this->bone_index[i] = (int)temp;
             }
             float w;
@@ -99,9 +100,9 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
                 this->bone_weight[i] = w;
             }
         } else if (info[5] == 4) {
-            int temp;
+            int32_t temp;
             for (int i = 0; i < 4; i++) {
-                ifs.read((char*)&temp, sizeof(int));
+                ifs.read((char*)&temp, sizeof(int32_t));
                 this->bone_index[i] = (int)temp;
             }
             float w;
@@ -112,22 +113,22 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
         }
     } else if (this->weight_type == 3) {
         if (info[5] == 1) {
-            char temp;
-            ifs.read((char*)&temp, sizeof(char));
+            int8_t temp;
+            ifs.read((char*)&temp, sizeof(int8_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(char));
+            ifs.read((char*)&temp, sizeof(int8_t));
             this->bone_index[1] = (int)temp;
         } else if (info[5] == 2) {
-            short temp;
-            ifs.read((char*)&temp, sizeof(char));
+            int16_t temp;
+            ifs.read((char*)&temp, sizeof(int16_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(char));
+            ifs.read((char*)&temp, sizeof(int16_t));
             this->bone_index[1] = (int)temp;
         } else if (info[5] == 4) {
-            int temp;
-            ifs.read((char*)&temp, sizeof(char));
+            int32_t temp;
+            ifs.read((char*)&temp, sizeof(int32_t));
             this->bone_index[0] = (int)temp;
-            ifs.read((char*)&temp, sizeof(char));
+            ifs.read((char*)&temp, sizeof(int32_t));
             this->bone_index[1] = (int)temp;
         }
         float w;
@@ -173,15 +174,13 @@ void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     ifs.read((char*)(&(this->num)), sizeof(int));
     if (info[0] == 0) {
         this->path = new char[1024];
-        char* temp = new char[1024];
+        char* temp = new char[this->num];
         if (this->num > 1024) {
             std::cout << "Buffer Error" << std::endl;
             return;
         }
         ifs.read((char*)temp, sizeof(char) * this->num);
-        conv_utf16(temp, this->path);
-        std::cout << this->path << std::endl;
-        std::cout << std::endl;
+        conv_utf16(temp, this->path, this->num);
     } else if (info[0] == 1) {
         this->path = new char[this->num];
         ifs.read((char*)(this->path), sizeof(char) * this->num);
@@ -190,13 +189,19 @@ void Texture::read_data(std::ifstream &ifs, unsigned char (&info)[8])
 
 void Texture::read_image(void)
 {
-    IplImage* temp;
+    std::string fname = this->path;
+    std::string::size_type index(fname.rfind("tga"));
+    if (index != std::string::npos) {
+      strcpy(this->path, fname.replace(index, 3, "png").c_str());
+    }
+
     if ((this->image = cvLoadImage(this->path, CV_LOAD_IMAGE_COLOR)) == 0) {
         std::cerr << this->path << std::endl;
         std::cerr << "Load Error" << std::endl;
-        exit(1);
+    //    exit(1);
+    } else {
+      cvCvtColor(this->image, this->image, CV_BGR2RGB);
     }
-    cvCvtColor(this->image, this->image, CV_BGR2RGB);
 }
 
 void Material::read_data(std::ifstream &ifs, unsigned char (&info)[8])
@@ -293,6 +298,7 @@ void MMD_model::read_model(char* filename)
 
     ifs.read((char*)(this->magic1), sizeof(unsigned char) * 4);
     ifs.read((char*)(&(this->version)), sizeof(float));
+    std::cout << "Version: " << this->version << std::endl;
     ifs.read((char*)(&(this->info_byte)), sizeof(unsigned char));
     ifs.read((char*)(this->info), sizeof(unsigned char) * 8);
     
@@ -351,14 +357,16 @@ void MMD_model::texture_config(void)
     }
     glEnable(GL_TEXTURE_2D);
     for (int i = 0; i < this->texture_num; i++) {
-        glGenTextures(1, &(this->texture_data[i].id));
-        glBindTexture(GL_TEXTURE_2D, this->texture_data[i].id);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->texture_data[i].image->width, this->texture_data[i].image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, this->texture_data[i].image->imageData);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        if (this->texture_data[i].image->imageSize != 0) {
+            glGenTextures(1, &(this->texture_data[i].id));
+            glBindTexture(GL_TEXTURE_2D, this->texture_data[i].id);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->texture_data[i].image->width, this->texture_data[i].image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, this->texture_data[i].image->imageData);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        }
     }
     glDisable(GL_TEXTURE_2D);
 }
