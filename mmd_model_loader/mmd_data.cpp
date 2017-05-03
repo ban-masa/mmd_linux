@@ -242,12 +242,27 @@ void Material::read_data(std::ifstream &ifs, unsigned char (&info)[8])
 void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
 {
     int temp;
-    ifs.read((char*)&temp, sizeof(int));
-    this->bone_name[0] = new char[temp];
-    ifs.read((char*)(&(this->bone_name[0])), sizeof(char) * temp);
-    ifs.read((char*)&temp, sizeof(int));
-    this->bone_name[1] = new char[temp];
-    ifs.read((char*)(&(this->bone_name[1])), sizeof(char) * temp);
+
+    if (info[0] == 0) {
+        this->bone_name[0] = new char[1024];
+        this->bone_name[1] = new char[1024];
+        ifs.read((char*)&temp, sizeof(int));
+        char* buff1 = new char[temp];
+        ifs.read((char*)buff1, sizeof(char) * temp);
+        conv_utf16(buff1, this->bone_name[0], temp);
+        ifs.read((char*)&temp, sizeof(int));
+        char* buff2 = new char[temp];
+        ifs.read((char*)buff2, sizeof(char) * temp);
+        conv_utf16(buff2, this->bone_name[1], temp);
+        std::cout << this->bone_name[0] << std::endl;
+    } else if (info[0] == 1) {
+        ifs.read((char*)&temp, sizeof(int));
+        this->bone_name[0] = new char[temp];
+        ifs.read((char*)(&(this->bone_name[0])), sizeof(char) * temp);
+        ifs.read((char*)&temp, sizeof(int));
+        this->bone_name[1] = new char[temp];
+        ifs.read((char*)(&(this->bone_name[1])), sizeof(char) * temp);
+    }
     ifs.read((char*)(&(this->pos)), sizeof(float) * 3);
     ifs.read((char*)(&(this->parent_index)), sizeof(unsigned char) * info[5]);
     ifs.read((char*)(&(this->transform_hierarchy)), sizeof(int));
