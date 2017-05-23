@@ -1,14 +1,20 @@
+#pragma once
 #include <string>
 #include <iostream>
 #include <cv.h>
 #include <highgui.h>
 #include <GL/glut.h>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+#include "vmd_reader.hpp"
 
 class Vertex {
 public:
     
     float locate[3];
     float normal[3];
+    float rel_pos[4][3];
+
     float uv[2];
     float** ex_uv;
     unsigned char weight_type;
@@ -86,7 +92,9 @@ public:
 
 class Bone {
 public:
+    int id;
     char* bone_name[2];
+    std::string bone_name_string[2];
     float pos[3];
     int parent_index;
     int transform_hierarchy;
@@ -104,7 +112,26 @@ public:
     float IK_limit_angle;
     int IK_link_num;
     IK_link* IK_link_data;
+    Bone* parent_bone;
+
+    Eigen::Quaternionf q;
+    Eigen::Matrix4f H; //同時変換行列
+    Eigen::Matrix3f R; //回転行列
+    Eigen::Matrix3f Rlc; //XAxis, ZAxisが指定された場合の追加回転行列
+    Eigen::Vector3f rel_pos;
+    Eigen::Vector3f pdiff;
+
     void read_data(std::ifstream &ifs, unsigned char (&info)[8]);
+    void print_data(void);
+    bool ikbone(void);
+    bool grantbone(void);
+    bool localaxis(void);
+    void set_parent_bone(Bone* bone_list);
+    void calc_rotation_matrix(void);
+    void calc_ht_matrix(void);
+    void calc_pos(void);
+    void set_pos_qua(Eigen::Vector3f gp, Eigen::Quaternionf gq);
+    void set_qua(Eigen::Quaternionf gq);
 };
 
 class MMD_model {
@@ -145,6 +172,8 @@ public:
     Texture* texture_data;
     Material* material_data;
     Bone* bone_data;
+    int* sorted_bone_index;
+    VMDData* vmd_data;
 
     MMD_model()
     {
@@ -163,7 +192,13 @@ public:
         delete [] this->texture_data;
     }
 
+    void read_motion_data(char* filename);
     void read_model(char* filename);
     void display(void);
     void texture_config(void);
+    void bone_display(void);
+    void bone_with_vertex_display(int id);
+    void sort_bone_parent_child_relation(void);
+    void update_bone(void);
+    void set_angle(void);
 };

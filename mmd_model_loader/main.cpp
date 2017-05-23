@@ -4,6 +4,8 @@
 
 GLfloat lightPosition[4] = {-20.0, 20.0, 10000.0, 0.0};
 GLfloat white[] = {0.5, 0.5, 0.5, 1.0};
+int toggle_display_func = 0;
+int boneid = 0;
 
 MMD_model sample;
 
@@ -34,7 +36,15 @@ void resize(int w, int h)
 
 void display(void)
 {
-    sample.display();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (toggle_display_func % 3 == 0) {
+      sample.display();
+    } else if (toggle_display_func % 3 == 1) {
+      sample.bone_display();
+    } else {
+      sample.bone_with_vertex_display(boneid);
+    }
+    glutSwapBuffers();
     glFlush();
 }
 
@@ -60,6 +70,19 @@ void keyboard(unsigned char key, int x, int y)
             break;
         case 'R':
             sample.rotate_angle_y--;
+            break;
+        case 't':
+            toggle_display_func++;
+            break;
+        case 'n':
+            boneid++;
+            std::cout << boneid << std::endl;
+            break;
+        case 'u':
+            sample.update_bone();
+            break;
+        case 'i':
+            sample.set_angle();
             break;
         default:
             break;
