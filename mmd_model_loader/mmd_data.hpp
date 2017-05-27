@@ -201,4 +201,9 @@ public:
     void sort_bone_parent_child_relation(void);
     void update_bone(void);
     void set_angle(void);
+    bool search_bone(char* bonename, Bone** bonep);
+    void play_motion_data(int frame_number);
+    void set_motion_data_to_bone(MotionData& md);
+    void play_motion_sequence(void);
+    void play_motion_frame(void);
 };

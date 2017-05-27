@@ -31,9 +31,11 @@ void Vertex::read_data(std::ifstream &ifs, unsigned char (&info)[8], int num)
     for (int i = 0; i < 3; i++) {
         ifs.read((char*)(&(this->locate[i])), sizeof(this->locate[i]));
     }
+    this->locate[2] = -this->locate[2];
     for (int i = 0; i < 3; i++) {
         ifs.read((char*)(&(this->normal[i])), sizeof(this->normal[i]));
     }
+    this->normal[2] = -this->normal[2];
     for (int i = 0; i < 2; i++) {
         ifs.read((char*)(&(this->uv[i])), sizeof(this->uv[i]));
     }
@@ -289,6 +291,8 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     }
     for (int i = 0; i < 2; i++) this->bone_name_string[i] = this->bone_name[i];
     ifs.read((char*)(&(this->pos)), sizeof(float) * 3);
+    this->pos[2] = -this->pos[2];
+
     read_based_on_bytesize(ifs, this->parent_index, info[5]);
     //ifs.read((char*)(&(this->parent_index)), sizeof(unsigned char) * info[5]);
     ifs.read((char*)(&(this->transform_hierarchy)), sizeof(int));
@@ -298,6 +302,7 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
         //ifs.read((char*)(&(this->connect_bone_index)), sizeof(unsigned char) * info[5]);
     } else {
         ifs.read((char*)(this->pos_offset), sizeof(float) * 3);
+        this->pos_offset[2] = -this->pos_offset[2];
     }
     if (this->bit_flag & (0x0100 | 0x0200)) {
         read_based_on_bytesize(ifs, this->grant_bone_index, info[5]);
@@ -306,10 +311,13 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     }
     if (this->bit_flag & 0x0400) {
         ifs.read((char*)(this->axis_vect), sizeof(float) * 3);
+        this->axis_vect[2] = -this->axis_vect[2];
     }
     if (this->bit_flag & 0x0800) {
         ifs.read((char*)(this->x_axis_vect), sizeof(float) * 3);
         ifs.read((char*)(this->z_axis_vect), sizeof(float) * 3);
+        this->x_axis_vect[2] = -this->x_axis_vect[2];
+        this->z_axis_vect[2] = -this->z_axis_vect[2];
     }
     if (this->bit_flag & 0x2000) {
         ifs.read((char*)(&(this->key_val)), sizeof(int));
@@ -346,6 +354,7 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
       Rlc = Eigen::Matrix3f::Identity();
     }
     pdiff = Eigen::Vector3f::Zero();
+    rel_pos = Eigen::Vector3f::Zero();
 }
 
 void Bone::print_data(void)
@@ -382,8 +391,8 @@ void Bone::print_data(void)
       for (int i = 0; i < this->IK_link_num; i++) {
         std::cout << "    Link Bone Index: " << this->IK_link_data[i].link_bone_index << std::endl;
         if (this->IK_link_data[i].angle_limit_flag == 1) {
-          std::cout << "    Upper Limit: " << this->IK_link_data[i].upper_limit << std::endl;
-          std::cout << "    Lower Limit: " << this->IK_link_data[i].lower_limit << std::endl;
+          std::cout << "    Upper Limit: " << this->IK_link_data[i].upper_limit[0] << ", " << this->IK_link_data[i].upper_limit[1] << ", " << this->IK_link_data[i].upper_limit[2] << std::endl;
+          std::cout << "    Lower Limit: " << this->IK_link_data[i].lower_limit[0] << ", " << this->IK_link_data[i].lower_limit[1] << ", " << this->IK_link_data[i].lower_limit[2] << std::endl;
         }
       }
     }
@@ -404,7 +413,10 @@ bool Bone::localaxis(void)
 
 void Bone::set_parent_bone(Bone* bone_list)
 {
-  if (parent_index < 0) return;
+  if (parent_index < 0) {
+    rel_pos = Eigen::Vector3f::Zero();
+    return;
+  }
   parent_bone = &(bone_list[parent_index]);
   rel_pos = Eigen::Vector3f(pos[0] - parent_bone->pos[0], pos[1] - parent_bone->pos[1], pos[2] - parent_bone->pos[2]);
   //std::cout << rel_pos(0) << " " << rel_pos(1) << " " << rel_pos(2) << std::endl;
@@ -732,6 +744,12 @@ void MMD_model::set_angle(void)
   }
   double angle;
   std::string axis;
+  std::cout << "Enter Axis (x, y, z): ";
+  std::cin >> axis;
+  if (axis != "x" && axis != "y" && axis != "z") {
+    std::cerr << "Unknown axis" << std::endl;
+    return;
+  }
   std::cout << "Enter Angle: ";
   std::cin >> angle;
   while (angle > 360 || angle < 0) {
@@ -739,12 +757,6 @@ void MMD_model::set_angle(void)
     else angle += 360;
   }
   if (angle > 180) angle = angle - 360;
-  std::cout << "Enter Axis (x, y, z): ";
-  std::cin >> axis;
-  if (axis != "x" && axis != "y" && axis != "z") {
-    std::cerr << "Unknown axis" << std::endl;
-    return;
-  }
   Eigen::Vector3f set_axis = Eigen::Vector3f::Zero();
   if (axis == "x") {
     set_axis(0) = 1.0;
@@ -755,5 +767,58 @@ void MMD_model::set_angle(void)
   }
   Eigen::Quaternionf set_q;
   set_q = Eigen::AngleAxisf(angle * M_PI / 180.0, set_axis);
-  bn->set_qua(set_q);
+  Eigen::Vector3f gp = Eigen::Vector3f::Zero();
+  bn->set_pos_qua(gp, set_q);
 }
+
+bool MMD_model::search_bone(char* bonename, Bone** bonep)
+{
+  std::string bn1(bonename);
+  for (int i = 0; i < bone_num; i++) {
+    if (bone_data[i].bone_name_string[0] == bn1) {
+      *bonep = &(bone_data[i]);
+      return true;
+    }
+  }
+  return false;
+}
+
+void MMD_model::play_motion_data(int frame_number)
+{
+  for (int i = 0; i < vmd_data->motion_count; i++) {
+    if (vmd_data->motion_data_sorted[i].frame_number == frame_number) {
+      set_motion_data_to_bone(vmd_data->motion_data_sorted[i]);
+    }
+  }
+  update_bone();
+}
+
+void MMD_model::set_motion_data_to_bone(MotionData& md)
+{
+  Bone* bone;
+  if (!search_bone(md.bone_name, &bone)) return;
+  if (bone->grantbone()) return;
+  Eigen::Vector3f gp(md.p[0], md.p[1], md.p[2]);
+  Eigen::Quaternionf gq(md.r[3], md.r[0], md.r[1], md.r[2]);
+  bone->set_pos_qua(gp, gq);
+}
+
+void MMD_model::play_motion_sequence(void)
+{
+  std::cout << "start" << std::endl;
+  for (int i = 0; i <= vmd_data->max_frame_number; i++) {
+    play_motion_data(i);
+    glutPostRedisplay();
+  }
+  std::cout << "finish" << std::endl;
+}
+
+void MMD_model::play_motion_frame(void)
+{
+  int frame;
+  std::cout << "Frame: ";
+  std::cin >> frame;
+  play_motion_data(frame);
+  glutPostRedisplay();
+}
+

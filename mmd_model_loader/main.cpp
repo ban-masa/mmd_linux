@@ -48,6 +48,15 @@ void display(void)
     glFlush();
 }
 
+void timer(int value)
+{
+  if (0 <= value && value <= sample.vmd_data->max_frame_number) {
+    sample.play_motion_data(value);
+    glutPostRedisplay();
+    glutTimerFunc(15, timer, value + 1);
+  }
+}
+
 void keyboard(unsigned char key, int x, int y)
 {
     switch (key) {
@@ -84,6 +93,9 @@ void keyboard(unsigned char key, int x, int y)
         case 'i':
             sample.set_angle();
             break;
+        case 'p':
+            glutTimerFunc(15, timer, 0);
+            break;
         default:
             break;
     }
@@ -95,6 +107,10 @@ int main(int argc, char** argv)
     if (argc < 2) {
         std::cerr << "ファイルを指定してください" << std::endl;
         std::exit(1);
+    }
+
+    if (argc >= 3) {
+      sample.read_motion_data(argv[2]);
     }
 
     sample.read_model(argv[1]);
