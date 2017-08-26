@@ -113,6 +113,8 @@ public:
     int IK_link_num;
     IK_link* IK_link_data;
     Bone* parent_bone;
+    Bone* target_bone;
+    Bone** ik_bone_list;
 
     Eigen::Quaternionf q;
     Eigen::Matrix4f H; //同時変換行列
@@ -126,12 +128,14 @@ public:
     bool ikbone(void);
     bool grantbone(void);
     bool localaxis(void);
+    bool fixedaxis(void);
     void set_parent_bone(Bone* bone_list);
     void calc_rotation_matrix(void);
     void calc_ht_matrix(void);
     void calc_pos(void);
     void set_pos_qua(Eigen::Vector3f gp, Eigen::Quaternionf gq);
     void set_qua(Eigen::Quaternionf gq);
+    void set_ik_bone_list(Bone* bone_list);
 };
 
 class MMD_model {

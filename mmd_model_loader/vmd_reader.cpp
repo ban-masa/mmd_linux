@@ -22,6 +22,8 @@ void MotionData::read_data(std::ifstream &ifs)
   ifs.read((char*)p, sizeof(p));
   p[2] = -p[2];
   ifs.read((char*)r, sizeof(r));
+  r[2] = -r[2];
+  for (int i = 0; i < 3; i++) r[i] = -r[i];
   ifs.read((char*)interpolation, sizeof(interpolation));
 
 }

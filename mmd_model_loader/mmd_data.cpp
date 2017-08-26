@@ -318,6 +318,8 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
         ifs.read((char*)(this->z_axis_vect), sizeof(float) * 3);
         this->x_axis_vect[2] = -this->x_axis_vect[2];
         this->z_axis_vect[2] = -this->z_axis_vect[2];
+
+        for (int i = 0; i < 3; i++) this->z_axis_vect[i] = -this->z_axis_vect[i];
     }
     if (this->bit_flag & 0x2000) {
         ifs.read((char*)(&(this->key_val)), sizeof(int));
@@ -341,18 +343,6 @@ void Bone::read_data(std::ifstream &ifs, unsigned char (&info)[8])
     }
     q = Eigen::Quaternionf::Identity();
     R = Eigen::Matrix3f::Identity();
-    if (this->bit_flag & 0x0800) {
-      Eigen::Vector3f x(x_axis_vect[0], x_axis_vect[1], x_axis_vect[2]);
-      Eigen::Vector3f z(z_axis_vect[0], z_axis_vect[1], z_axis_vect[2]);
-      x.normalize();
-      z.normalize();
-      Eigen::Vector3f y = z.cross(x);
-      Rlc.col(0) = x;
-      Rlc.col(1) = y;
-      Rlc.col(2) = z;
-    } else {
-      Rlc = Eigen::Matrix3f::Identity();
-    }
     pdiff = Eigen::Vector3f::Zero();
     rel_pos = Eigen::Vector3f::Zero();
 }
@@ -410,6 +400,11 @@ bool Bone::localaxis(void)
   return false;
 }
 
+bool Bone::fixedaxis(void)
+{
+  if (this->bit_flag & 0x0400) return true;
+  return false;
+}
 
 void Bone::set_parent_bone(Bone* bone_list)
 {
@@ -424,24 +419,7 @@ void Bone::set_parent_bone(Bone* bone_list)
 
 void Bone::calc_rotation_matrix(void)
 {
-  if (localaxis()) {
-    float theta = 2.0 * std::acos(q.w());
-    if (std::sin(theta / 2.0) == 0) {
-      R = Eigen::Matrix3f::Identity();
-    } else {
-      Eigen::Vector3f axis;
-      axis(0) = q.x() / std::sin(theta / 2.0);
-      axis(1) = q.y() / std::sin(theta / 2.0);
-      axis(2) = q.z() / std::sin(theta / 2.0);
-      axis = Rlc * axis;
-
-      Eigen::Quaternionf tempq;
-      tempq = Eigen::AngleAxisf(theta, axis);
-      R = tempq.matrix();
-    }
-  } else {
-    R = q.matrix();
-  }
+  R = q.matrix();
 }
 
 void Bone::calc_ht_matrix(void)
@@ -491,6 +469,38 @@ bool Bone::grantbone(void) {
   if (bit_flag & 0x0200) return true;
   return false;
 }
+
+void Bone::set_ik_bone_list(Bone* bonelist)
+{
+  if (!ikbone()) return;
+  ik_bone_list = new Bone*[this->IK_link_num];
+  for (int i = 0; i < IK_link_num; i++) {
+    ik_bone_list[i] = &(bonelist[IK_link_data[i].link_bone_index]);
+  }
+  target_bone = &(bonelist[IK_target_bone_index]);
+}
+
+/*void Bone::inverse_kinematics(void)
+{
+  for (int i = 0; i < this->IK_loop_num; i++) {
+    for (int j = 0; j < this->IK_link_num; i++) {
+      Vector3f ik_goal_pos;
+      ik_goal_pos << this->pos[0], this->pos[1], this->pos[2];
+      Vector3f target_pos;
+      target_pos << target_bone->pos[0], target_bone->pos[1], target_bone->pos[2];
+      Bone& bn = *(ik_bone_list[j]);
+      Vector3f link_pos;
+      link_pos << bn.pos[0], bn.pos[1], bn.pos[2];
+      Vector3f v_target = target_pos - link_pos;
+      Vector3f v_ik = ik_goal_pos - link_pos;
+      if (this->localaxis()) {
+
+      }
+    }
+  }
+}*/
+
+//MMD_model methods
 
 void MMD_model::read_model(char* filename)
 {
@@ -556,6 +566,7 @@ void MMD_model::read_model(char* filename)
     }
     for (int i = 0; i < this->bone_num; i++) {
       this->bone_data[i].set_parent_bone(this->bone_data);
+      this->bone_data[i].set_ik_bone_list(this->bone_data);
     }
     sort_bone_parent_child_relation();
 }
@@ -821,4 +832,3 @@ void MMD_model::play_motion_frame(void)
   play_motion_data(frame);
   glutPostRedisplay();
 }
-
